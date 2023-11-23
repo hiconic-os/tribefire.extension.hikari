@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<projectDescription>
+	<name>hikari-deployment-model - tribefire.extension.hikari</name>
+	<buildSpec>
+		<buildCommand>
+			<name>com.braintribe.devrock.arb.builder.ArtifactReflectionBuilder</name>
+			<arguments/>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments/>
+		</buildCommand>
+		<buildCommand>
+			<name>com.braintribe.eclipse.model.nature.ModelBuilder</name>
+			<arguments/>
+		</buildCommand>
+    </buildSpec>
+    <natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+		<nature>com.braintribe.eclipse.model.nature.ModelNature</nature>
+    </natures>
+</projectDescription>

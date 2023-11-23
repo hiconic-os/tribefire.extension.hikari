@@ -1,0 +1,13 @@
+*/build
+*/classes
+*/class-gen
+*/dist
+*.sh
+
+# Automatically created
+**/.DS_Store
+**/.DS_Store?
+**/.Spotlight-V100
+**/.Trashes
+**/ehthumbs.db
+**/Thumbs.db
