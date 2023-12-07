@@ -12,7 +12,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>tribefire.extension.hikari</groupId>
 	<artifactId>parent</artifactId>
-	<version>1.0.5</version>
+	<version>1.0.6</version>
 	<packaging>pom</packaging>
 	<properties>
 		<java.version>21</java.version>
