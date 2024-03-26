@@ -12,9 +12,11 @@
 package tribefire.extension.hikari.processing;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.sql.DataSource;
 
@@ -36,7 +38,8 @@ public class HikariDataSources {
 
 	private static final Logger log = Logger.getLogger(HikariDataSources.class);
 
-	private final ConcurrentHashMap<String, DataSource> createdDataSources = new ConcurrentHashMap<>();
+	private final Map<String, DataSource> createdDataSources = new HashMap<>();
+	private final ReentrantLock dataSourcesLock = new ReentrantLock();
 
 	private final MetricRegistry metricRegistry = new MetricRegistry();
 
@@ -48,55 +51,59 @@ public class HikariDataSources {
 	 *            The {@link HikariCpConnectionPool} providing the necessary configuration for creating a HikariCP {@link HikariDataSource}.
 	 * @return A HikariCP {@link HikariDataSource} created based on the given {@link HikariCpConnectionPool}
 	 */
-	public synchronized HikariDataSource dataSource(HikariCpConnectionPool connectionPool) {
+	public HikariDataSource dataSource(HikariCpConnectionPool connectionPool) {
 
 		String key = connectionPool.getExternalId();
 		Objects.requireNonNull(key, "The connection pool " + connectionPool.stringify() + " does not have an externalId.");
 
-		HikariDataSource existingDataSource = (HikariDataSource) createdDataSources.get(key);
-		if (existingDataSource != null) {
-			if (existingDataSource.isClosed()) {
-				createdDataSources.remove(key);
-			} else {
-				return existingDataSource;
-			}
-		}
-
-		DatabaseConnectionDescriptor originalConnector = connectionPool.getConnectionDescriptor();
-		GenericDatabaseConnectionDescriptor connector = GenericDatabaseConnectionDescriptor.from(originalConnector);
-
-		String url = connector.getUrl();
-
-		StringBuilder sb = new StringBuilder("HikariCP:'");
-		if (url != null) {
-			sb.append(url);
-		}
-		sb.append('\'');
-		log.pushContext(sb.toString());
-
+		dataSourcesLock.lock();
 		try {
+			HikariDataSource existingDataSource = (HikariDataSource) createdDataSources.get(key);
+			if (existingDataSource != null) {
+				if (existingDataSource.isClosed()) {
+					createdDataSources.remove(key);
+				} else {
+					return existingDataSource;
+				}
+			}
 
-			HikariDataSource result = new HikariDataSource();
+			DatabaseConnectionDescriptor originalConnector = connectionPool.getConnectionDescriptor();
+			GenericDatabaseConnectionDescriptor connector = GenericDatabaseConnectionDescriptor.from(originalConnector);
 
-			result.setDriverClassName(connector.getDriver());
-			result.setJdbcUrl(url);
-			result.setUsername(connector.getUser());
-			result.setPassword(connector.getPassword());
+			String url = connector.getUrl();
 
-			configurePooledJdbcConnectorSettings(connectionPool, result);
-			configureExtendedConnectionPoolSettings(connectionPool, result);
-			configureInitStatements(connectionPool, result);
+			StringBuilder sb = new StringBuilder("HikariCP:'");
+			if (url != null) {
+				sb.append(url);
+			}
+			sb.append('\'');
+			log.pushContext(sb.toString());
 
-			createdDataSources.put(key, result);
+			try {
 
-			return result;
+				HikariDataSource result = new HikariDataSource();
 
-		} catch (Exception e) {
-			throw new IllegalArgumentException("Invalid config: " + connectionPool, e);
+				result.setDriverClassName(connector.getDriver());
+				result.setJdbcUrl(url);
+				result.setUsername(connector.getUser());
+				result.setPassword(connector.getPassword());
+
+				configurePooledJdbcConnectorSettings(connectionPool, result);
+				configureExtendedConnectionPoolSettings(connectionPool, result);
+				configureInitStatements(connectionPool, result);
+
+				createdDataSources.put(key, result);
+
+				return result;
+
+			} catch (Exception e) {
+				throw new IllegalArgumentException("Invalid config: " + connectionPool, e);
+			} finally {
+				log.popContext();
+			}
 		} finally {
-			log.popContext();
+			dataSourcesLock.unlock();
 		}
-
 	}
 
 	private static void configurePooledJdbcConnectorSettings(HikariCpConnectionPool connectionPool, HikariDataSource result) {
