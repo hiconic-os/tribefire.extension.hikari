@@ -24,7 +24,7 @@ limitations under the License.
  		<V.com.braintribe.testing>[2.0,2.1)</V.com.braintribe.testing>
  		<V.com.braintribe.gm>[2.0,2.1)</V.com.braintribe.gm>
  		<V.tribefire.cortex>[3.0,3.1)</V.tribefire.cortex>
-        <V.com.zaxxer>5.1.0</V.com.zaxxer>
+        <V.com.zaxxer>6.3.0</V.com.zaxxer>
         <V.io.dropwizard.metrics>4.0.5</V.io.dropwizard.metrics>
  	</properties>
     <licenses>
