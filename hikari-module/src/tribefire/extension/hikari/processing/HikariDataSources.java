@@ -56,8 +56,8 @@ public class HikariDataSources {
 
 	private final MetricRegistry metricRegistry = new MetricRegistry();
 
-	private ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-	private ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
 	private final Map<HikariDataSource, String> dataSourceIpMap = new HashMap<>();
 
@@ -254,8 +254,7 @@ public class HikariDataSources {
 			}
 		}
 
-		Boolean enableIpAddressChangeMonitoring = connectionPool.getEnableIpAddressChangeMonitoring();
-		if (enableIpAddressChangeMonitoring != null && enableIpAddressChangeMonitoring.booleanValue()) {
+		if (Boolean.TRUE.equals(connectionPool.getEnableIpAddressChangeMonitoring())) {
 			// Not very clean, but effective. When we see a DataSource with this flag set to true, we will monitor it for IP address changes
 			// By default, HikariCP does not allow pool suspension, so we need to enable it here
 			result.setAllowPoolSuspension(true);

@@ -79,7 +79,6 @@ public interface HikariCpConnectionPool extends ConfiguredDatabaseConnectionPool
 	JdbcTransactionIsolationLevel getTransactionIsolationLevel();
 	void setTransactionIsolationLevel(JdbcTransactionIsolationLevel transactionIsolationLevel);
 
-	@Initializer("false")
 	Boolean getEnableIpAddressChangeMonitoring();
 	void setEnableIpAddressChangeMonitoring(Boolean enableIpAddressChangeMonitoring);
 
