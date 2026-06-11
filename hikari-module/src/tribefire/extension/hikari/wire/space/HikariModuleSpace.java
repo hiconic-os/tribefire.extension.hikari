@@ -133,7 +133,9 @@ public class HikariModuleSpace implements TribefireModuleContract {
 
 	@Managed
 	private HikariDataSources hikariDataSources() {
-		return new HikariDataSources();
+		HikariDataSources bean = new HikariDataSources();
+		bean.setTaskScheduler(tfPlatform.worker().taskScheduler());
+		return bean;
 	}
 
 }

@@ -26,12 +26,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.braintribe.cfg.Configurable;
+import com.braintribe.cfg.InitializationAware;
+import com.braintribe.common.concurrent.TaskScheduler;
 import com.braintribe.logging.Logger;
 import com.braintribe.model.deployment.database.JdbcTransactionIsolationLevel;
 import com.braintribe.model.deployment.database.connector.DatabaseConnectionDescriptor;
@@ -47,7 +47,7 @@ import com.zaxxer.hikari.metrics.dropwizard.CodahaleMetricsTrackerFactory;
 /**
  * @author peter.gazdik
  */
-public class HikariDataSources {
+public class HikariDataSources implements InitializationAware {
 
 	private static final Logger log = Logger.getLogger(HikariDataSources.class);
 
@@ -56,20 +56,24 @@ public class HikariDataSources {
 
 	private final MetricRegistry metricRegistry = new MetricRegistry();
 
-	private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-
 	private final Map<HikariDataSource, String> dataSourceIpMap = new HashMap<>();
+	private TaskScheduler taskScheduler;
 
 	private static final long MAX_EVICT_WAIT_TIME_MILLS = 60000L;
 	private static final int ZERO_CONNECTION_VALIDATION_COUNT = 10;
 
-	public HikariDataSources() {
-		scheduler.scheduleAtFixedRate(() -> executor.execute(this::checkForIpChange), 1L, 1L, TimeUnit.MINUTES);
+	@Configurable
+	public void setTaskScheduler(TaskScheduler taskScheduler) {
+		this.taskScheduler = taskScheduler;
+	}
+
+	@Override
+	public void postConstruct() {
+		if (taskScheduler != null)
+			taskScheduler.scheduleAtFixedRate("CheckHikariConnectionIpChange", this::checkForIpChange, 1L, 1L, TimeUnit.MINUTES).done();
 	}
 
 	/**
-	 * <p>
 	 * Creates a HikariCP {@link HikariDataSource} based on the given {@link HikariCpConnectionPool}.
 	 * 
 	 * @param connectionPool
@@ -105,7 +109,6 @@ public class HikariDataSources {
 			log.pushContext(sb.toString());
 
 			try {
-
 				HikariDataSource result = new HikariDataSource();
 
 				result.setDriverClassName(connector.getDriver());
@@ -285,29 +288,21 @@ public class HikariDataSources {
 	}
 
 	private void checkForIpChange() {
-		List<HikariDataSource> availableDataSources;
-		dataSourcesLock.lock();
-		try {
-			availableDataSources = new ArrayList<>(createdDataSources.values());
-		} finally {
-			dataSourcesLock.unlock();
-		}
-		if (availableDataSources.isEmpty()) {
+		List<HikariDataSource> availableDataSources = createdDataSourcesSnapshot();
+		if (availableDataSources.isEmpty())
 			return;
-		}
 
 		List<HikariDataSource> filteredDataSources = availableDataSources.stream().filter(ds -> ds.isAllowPoolSuspension()).toList();
-
-		filteredDataSources.forEach(dataSource -> {
+		for (HikariDataSource dataSource : filteredDataSources) {
 			try {
 				String ip = getIp(dataSource.getJdbcUrl());
-				if (ip == null) {
-					return;
-				}
+				if (ip == null)
+					continue;
 
 				String storedIp = dataSourceIpMap.get(dataSource);
 				if (storedIp == null) {
 					dataSourceIpMap.put(dataSource, ip);
+
 				} else if (!ip.equals(storedIp)) {
 					log.info("IP address changed from " + storedIp + " to " + ip);
 					evictConnections(dataSource);
@@ -317,7 +312,17 @@ public class HikariDataSources {
 			} catch (Exception e) {
 				log.error("Caught exception in IP address check", e);
 			}
-		});
+		}
+	}
+
+	private List<HikariDataSource> createdDataSourcesSnapshot() {
+		dataSourcesLock.lock();
+		try {
+			return new ArrayList<>(createdDataSources.values());
+
+		} finally {
+			dataSourcesLock.unlock();
+		}
 	}
 
 	/**
@@ -376,4 +381,5 @@ public class HikariDataSources {
 		InetAddress address = InetAddress.getByName(aURL.getHost());
 		return address.getHostAddress();
 	}
+
 }
