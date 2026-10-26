@@ -135,32 +135,32 @@ public class HikariDataSources implements InitializationAware {
 	}
 
 	private static void configurePooledJdbcConnectorSettings(HikariCpConnectionPool connectionPool, HikariDataSource result) {
-
 		boolean debug = log.isDebugEnabled();
+		String logPrefix = "Connection pool [" + connectionPool.getExternalId() + "]: ";
 
 		Integer checkoutTimeout = connectionPool.getCheckoutTimeout();
 		if (checkoutTimeout != null) {
 			if (debug)
-				log.debug("Checkout timeout: " + checkoutTimeout + " ms");
+				log.debug(logPrefix + "Checkout timeout: " + checkoutTimeout + " ms");
 			result.setConnectionTimeout(checkoutTimeout);
 		}
 
 		Integer maxPoolSize = connectionPool.getMaxPoolSize();
 		if (maxPoolSize != null && maxPoolSize > 0) {
 			if (debug)
-				log.debug("Maximum poolsize: " + maxPoolSize);
+				log.debug(logPrefix + "Maximum poolsize: " + maxPoolSize);
 			result.setMaximumPoolSize(maxPoolSize);
 		}
 
 		Integer minPoolSize = connectionPool.getMinPoolSize();
 		if (minPoolSize != null && minPoolSize >= 0) {
 			if (debug)
-				log.debug("Minimum poolsize: " + minPoolSize);
+				log.debug(logPrefix + "Minimum poolsize: " + minPoolSize);
 			result.setMinimumIdle(minPoolSize);
 		}
 
 		if ((maxPoolSize != null && maxPoolSize > 0) && (minPoolSize == null || minPoolSize == 0)) {
-			log.info("MaxPoolSize is set to " + maxPoolSize
+			log.info(logPrefix + "MaxPoolSize is set to " + maxPoolSize
 					+ " while no minPoolSize is defined. Please be aware that this will immediately open (and keep) " + maxPoolSize
 					+ " connections.");
 		}
@@ -168,14 +168,14 @@ public class HikariDataSources implements InitializationAware {
 		String preferredTestQuery = connectionPool.getPreferredTestQuery();
 		if (preferredTestQuery != null) {
 			if (debug)
-				log.debug("Test query: " + preferredTestQuery);
+				log.debug(logPrefix + "Test query: " + preferredTestQuery);
 			result.setConnectionTestQuery(preferredTestQuery);
 		}
 
 		Integer maxStatements = connectionPool.getMaxStatements();
 		if (maxStatements != null) {
 			if (debug)
-				log.debug("Maximum statements cached: " + maxStatements);
+				log.debug(logPrefix + "Maximum statements cached: " + maxStatements);
 			result.addDataSourceProperty("cachePrepStmts", "true");
 			result.addDataSourceProperty("prepStmtCacheSize", "" + maxStatements);
 		}
@@ -183,7 +183,7 @@ public class HikariDataSources implements InitializationAware {
 		Integer maxIdleTime = connectionPool.getMaxIdleTime();
 		if (maxIdleTime != null) {
 			if (debug)
-				log.debug("Maximum idle time: " + maxIdleTime + " ms");
+				log.debug(logPrefix + "Maximum idle time: " + maxIdleTime + " ms");
 			result.setIdleTimeout(maxIdleTime);
 		}
 
@@ -193,13 +193,13 @@ public class HikariDataSources implements InitializationAware {
 	}
 
 	private void configureExtendedConnectionPoolSettings(HikariCpConnectionPool connectionPool, HikariDataSource result) throws SQLException {
-
 		boolean debug = log.isDebugEnabled();
+		String logPrefix = "Connection pool [" + connectionPool.getExternalId() + "]: ";
 
 		Integer loginTimeout = connectionPool.getLoginTimeout();
 		if (loginTimeout != null) {
 			if (debug)
-				log.debug("Login timeout: " + loginTimeout + " ms");
+				log.debug(logPrefix + "Login timeout: " + loginTimeout + " ms");
 			result.setLoginTimeout(loginTimeout);
 
 		}
@@ -207,21 +207,21 @@ public class HikariDataSources implements InitializationAware {
 		Integer initializationFailTimeout = connectionPool.getInitializationFailTimeout();
 		if (initializationFailTimeout != null) {
 			if (debug)
-				log.debug("Initialization timeout: " + initializationFailTimeout + " ms");
+				log.debug(logPrefix + "Initialization timeout: " + initializationFailTimeout + " ms");
 			result.setInitializationFailTimeout(initializationFailTimeout);
 		}
 
 		Integer validationTimeout = connectionPool.getValidationTimeout();
 		if (validationTimeout != null) {
 			if (debug)
-				log.debug("Maximum validation timeout: " + validationTimeout + " ms");
+				log.debug(logPrefix + "Maximum validation timeout: " + validationTimeout + " ms");
 			result.setValidationTimeout(validationTimeout);
 		}
 
 		String dataSourceName = connectionPool.getDataSourceName();
 		if (dataSourceName != null) {
 			if (debug)
-				log.debug("Datasource name: " + dataSourceName);
+				log.debug(logPrefix + "Datasource name: " + dataSourceName);
 			result.setPoolName(dataSourceName);
 
 		} else {
@@ -230,7 +230,7 @@ public class HikariDataSources implements InitializationAware {
 				extId = extId.replace(':', '/'); // ':' is forbidden in pool names (at least sometimes)
 
 				if (debug)
-					log.debug("Datasource name (from external Id): " + extId);
+					log.debug(logPrefix + "Datasource name (from external Id): " + extId);
 				result.setPoolName(extId);
 			}
 		}
@@ -238,7 +238,7 @@ public class HikariDataSources implements InitializationAware {
 		String schema = connectionPool.getSchema();
 		if (schema != null) {
 			if (debug)
-				log.debug("Schema: " + schema);
+				log.debug(logPrefix + "Schema: " + schema);
 			result.setSchema(schema);
 		}
 
@@ -266,9 +266,10 @@ public class HikariDataSources implements InitializationAware {
 	}
 
 	private static void configureInitStatements(HikariCpConnectionPool connectionPool, HikariDataSource result) {
-		if (CollectionTools.isEmpty(connectionPool.getInitialStatements())) {
+		if (CollectionTools.isEmpty(connectionPool.getInitialStatements()))
 			return;
-		}
+
+		String logPrefix = "Connection pool [" + connectionPool.getExternalId() + "]: ";
 
 		List<String> initialStatements = connectionPool.getInitialStatements();
 		StringBuilder sb = new StringBuilder();
@@ -278,7 +279,7 @@ public class HikariDataSources implements InitializationAware {
 		}
 
 		if (log.isDebugEnabled()) {
-			log.debug("Connection initialization statement: " + sb.toString());
+			log.debug(logPrefix + "Connection initialization statement: " + sb.toString());
 		}
 		result.setConnectionInitSql(sb.toString());
 	}
